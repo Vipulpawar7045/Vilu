@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f8f5;
+  --foreground: #17201b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.field-control {
+  width: 100%;
+  border: 1px solid #cfd8ce;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.82);
+  padding: 0.7rem 0.85rem;
+  color: #17201b;
+  font-size: 0.875rem;
+  font-weight: 400;
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.field-control:focus {
+  border-color: #8ebd42;
+  box-shadow: 0 0 0 3px rgba(142, 189, 66, 0.2);
+}
+
+.field-control:focus-visible {
+  outline: 2px solid #8ebd42;
+  outline-offset: 2px;
+}
+
+.button-primary,
+.button-secondary,
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
+  outline: none;
+}
+
+.button-primary {
+  border: 1px solid #17201b;
+  background: #17201b;
+  color: white;
+}
+
+.button-primary:hover {
+  background: #344239;
+}
+
+.button-secondary {
+  border: 1px solid #cfd8ce;
+  background: rgba(255, 255, 255, 0.65);
+  color: #536158;
+}
+
+.button-secondary:hover {
+  border-color: #9cac9b;
+  background: white;
+  color: #17201b;
+}
+
+.button-danger {
+  border: 1px solid #f0cbc6;
+  background: #fff7f6;
+  color: #a3483e;
+}
+
+.button-danger:hover {
+  border-color: #d99a91;
+  background: #fff0ef;
+}
+
+.button-primary:focus-visible,
+.button-secondary:focus-visible,
+.button-danger:focus-visible {
+  box-shadow: 0 0 0 3px rgba(142, 189, 66, 0.35);
+}
+
+.button-primary:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+::selection {
+  background: #c7f36b;
+  color: #17201b;
+}

@@ -1,0 +1,462 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id               String    @id @default(cuid())
+  name             String
+  websiteUrl       String    @unique
+  industry         String?
+  companyType      String?
+  sizeEstimate     String?
+  location         String?
+  priority         Int       @default(3)
+  status           String    @default("active")
+  notes            String?
+  lastResearchedAt DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sources       Source[]
+  collectionCandidates CollectionCandidate[]
+  issueSignals  IssueSignal[]
+  issueClusters IssueCluster[]
+  savedSearches SavedSearch[]
+  evidence      Evidence[]
+  opportunities Opportunity[]
+  contacts      Contact[]
+  pilotEntries  PilotEntry[]
+}
+
+model Source {
+  id                  String    @id @default(cuid())
+  companyId           String
+  url                 String
+  sourceType          String
+  title               String?
+  publishedAt         DateTime?
+  sourceUpdatedAt     DateTime?
+  lastCheckedAt       DateTime?
+  accessibilityStatus String    @default("accessible")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  company  Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence Evidence[]
+  checks   SourceCheck[]
+  issueSignals IssueSignal[]
+
+  @@unique([companyId, url])
+  @@index([companyId])
+}
+
+model SourceCheck {
+  id             String   @id @default(cuid())
+  sourceId       String
+  checkedAt      DateTime @default(now())
+  responseStatus Int?
+  finalUrl       String?
+  previousHash   String?
+  contentHash    String?
+  normalizedText String?
+  resultStatus   String
+  reviewStatus   String   @default("not-needed")
+  errorMessage   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  source Source @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId, checkedAt])
+  @@index([reviewStatus])
+  @@index([resultStatus])
+}
+
+model CollectionCandidate {
+  id               String   @id @default(cuid())
+  companyId        String
+  url              String
+  pageType         String
+  title            String?
+  fetchedAt        DateTime @default(now())
+  responseStatus   Int?
+  contentHash      String?
+  previousHash     String?
+  normalizedText   String?
+  changeStatus     String   @default("new")
+  reviewStatus     String   @default("pending")
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([reviewStatus])
+  @@index([url])
+}
+
+model IssueSignal {
+  id                       String    @id @default(cuid())
+  companyId                String
+  sourceId                 String
+  sourceUrl                String
+  sourceType               String
+  title                    String
+  excerpt                  String
+  neutralSummary           String
+  sourcePublishedAt        DateTime?
+  sourceUpdatedAt          DateTime?
+  observedAt               DateTime  @default(now())
+  lastVerifiedAt           DateTime?
+  accessibilityStatus      String    @default("accessible")
+  responseStatus           Int?
+  fingerprint              String
+  groupKey                 String
+  reviewStatus             String    @default("discovered")
+  independentSourceCount   Int       @default(1)
+  recencyScore             Int       @default(1)
+  specificityScore         Int       @default(1)
+  sourceReliabilityScore   Int       @default(1)
+  corroborationScore       Int       @default(1)
+  impactScore              Int       @default(1)
+  solutionFitScore         Int       @default(1)
+  rankingScore             Float     @default(1)
+  promotedAt               DateTime?
+  clusterId                String?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  source  Source  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  cluster IssueCluster? @relation(fields: [clusterId], references: [id], onDelete: SetNull)
+  timelineEvents IssueClusterEvent[]
+
+  @@unique([companyId, fingerprint])
+  @@index([companyId, reviewStatus])
+  @@index([companyId, groupKey])
+  @@index([sourceType])
+  @@index([observedAt])
+  @@index([clusterId])
+}
+
+model IssueCluster {
+  id                     String   @id @default(cuid())
+  companyId              String
+  groupKey               String
+  title                  String
+  neutralSummary         String
+  category               String?
+  firstSeenAt            DateTime
+  latestSeenAt           DateTime
+  independentSourceCount Int      @default(1)
+  resolutionState        String   @default("open")
+  recencyScore           Int      @default(1)
+  specificityScore       Int      @default(1)
+  sourceReliabilityScore Int      @default(1)
+  corroborationScore     Int      @default(1)
+  impactScore            Int      @default(1)
+  solutionFitScore       Int      @default(1)
+  rankingScore           Float    @default(1)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  company        Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  signals        IssueSignal[]
+  timeline       IssueClusterEvent[]
+  solutionMatches SolutionMatch[]
+
+  @@unique([companyId, groupKey])
+  @@index([companyId, resolutionState])
+  @@index([rankingScore])
+}
+
+model IssueClusterEvent {
+  id                String   @id @default(cuid())
+  clusterId         String
+  signalId          String?
+  eventType         String
+  title             String?
+  summary           String
+  sourceUrl         String?
+  sourcePublishedAt DateTime?
+  observedAt        DateTime?
+  verifiedAt        DateTime?
+  createdAt         DateTime @default(now())
+
+  cluster IssueCluster @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  signal  IssueSignal? @relation(fields: [signalId], references: [id], onDelete: SetNull)
+
+  @@index([clusterId, createdAt])
+  @@index([signalId])
+}
+
+model ServiceCapability {
+  id             String   @id @default(cuid())
+  name           String
+  description    String
+  category       String?
+  keywords       String
+  estimatedEffort String?
+  expectedOutcome String?
+  nextAction     String?
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  solutionMatches SolutionMatch[]
+
+  @@unique([name])
+  @@index([active])
+}
+
+model SolutionMatch {
+  id              String   @id @default(cuid())
+  clusterId       String
+  capabilityId    String
+  rationale       String
+  fitScore        Int      @default(1)
+  estimatedEffort String?
+  expectedOutcome String?
+  nextAction      String?
+  reviewStatus    String   @default("needs-review")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  cluster    IssueCluster     @relation(fields: [clusterId], references: [id], onDelete: Cascade)
+  capability ServiceCapability @relation(fields: [capabilityId], references: [id], onDelete: Cascade)
+
+  @@unique([clusterId, capabilityId])
+  @@index([reviewStatus])
+}
+
+model SavedSearch {
+  id               String   @id @default(cuid())
+  name             String
+  companyId        String?
+  reviewStatus     String?
+  sourceType       String?
+  minimumScore     Float?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  @@unique([name])
+  @@index([companyId])
+}
+
+model Evidence {
+  id             String    @id @default(cuid())
+  sourceId       String
+  companyId      String
+  excerpt        String
+  snapshotPath   String?
+  observedAt     DateTime  @default(now())
+  lastVerifiedAt DateTime?
+  snapshotHash   String    @unique
+  confidence     Int       @default(1)
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  source           Source                @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  company          Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  opportunityLinks OpportunityEvidence[]
+  aiDraftLinks     AiDraftEvidence[]
+
+  @@index([companyId])
+  @@index([sourceId])
+}
+
+model Opportunity {
+  id                String    @id @default(cuid())
+  companyId         String
+  title             String
+  category          String
+  hypothesis        String
+  impactDescription String?
+  suggestedSolution String?
+  expectedOutcome   String?
+  impactScore       Int       @default(1)
+  evidenceScore     Int       @default(1)
+  solutionFitScore  Int       @default(1)
+  reachabilityScore Int       @default(1)
+  priorityScore     Float     @default(1)
+  freshnessLabel    String    @default("Undated")
+  status            String    @default("new")
+  companyConfirmed  Boolean   @default(false)
+  lastVerifiedAt    DateTime?
+  verificationNotes String?
+  resolvedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  company       Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidenceLinks OpportunityEvidence[]
+  outreach      Outreach[]
+  aiDrafts      AiDraft[]
+  pilotEntries  PilotEntry[]
+
+  @@unique([companyId, title])
+  @@index([companyId])
+  @@index([status])
+  @@index([freshnessLabel])
+}
+
+model OpportunityEvidence {
+  opportunityId String
+  evidenceId    String
+  linkedAt      DateTime @default(now())
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  evidence    Evidence    @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([opportunityId, evidenceId])
+  @@index([evidenceId])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  companyId      String
+  name           String
+  role           String?
+  profileUrl     String?
+  contactMethod  String?
+  relevanceNotes String?
+  doNotContact   Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  company  Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  outreach Outreach[]
+  aiDrafts AiDraft[]
+
+  @@index([companyId])
+}
+
+model Outreach {
+  id              String    @id @default(cuid())
+  opportunityId   String
+  contactId       String
+  channel         String
+  draftMessage    String
+  sentAt          DateTime?
+  followUpAt      DateTime?
+  responseSummary String?
+  nextAction      String?
+  status          String    @default("draft")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  opportunity Opportunity @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contact     Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  pilotEntries PilotEntry[]
+
+  @@index([opportunityId])
+  @@index([contactId])
+  @@index([status])
+}
+
+model AiDraft {
+  id            String   @id @default(cuid())
+  opportunityId String
+  contactId     String?
+  kind          String
+  provider      String
+  model         String?
+  promptContext String
+  originalText  String
+  draftText     String
+  status        String   @default("draft")
+  generatedAt   DateTime @default(now())
+  reviewedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  opportunity  Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  contact      Contact?          @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  evidenceLinks AiDraftEvidence[]
+
+  @@index([opportunityId])
+  @@index([contactId])
+  @@index([status])
+  @@index([kind])
+}
+
+model AiDraftEvidence {
+  draftId   String
+  evidenceId String
+
+  draft    AiDraft  @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  evidence Evidence @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+
+  @@id([draftId, evidenceId])
+  @@index([evidenceId])
+}
+
+model Pilot {
+  id              String       @id @default(cuid())
+  name            String
+  niche           String
+  targetCompanies Int          @default(25)
+  targetMessages  Int          @default(10)
+  status          String       @default("planned")
+  startedAt       DateTime?
+  endedAt         DateTime?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  entries PilotEntry[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model PilotEntry {
+  id                String    @id @default(cuid())
+  pilotId           String
+  companyId         String
+  opportunityId     String?
+  outreachId        String?
+  sourceCategory    String
+  issueCategory     String
+  issueCluster      String?
+  sourceUrl         String
+  evidenceDate      DateTime?
+  observedAt        DateTime?
+  lastVerifiedAt    DateTime?
+  manuallyReviewed  Boolean   @default(false)
+  impactScore       Int       @default(1)
+  evidenceScore     Int       @default(1)
+  solutionFitScore  Int       @default(1)
+  reachabilityScore Int       @default(1)
+  priorityScore     Float     @default(1)
+  proposedSolution  String
+  messageSentAt     DateTime?
+  replyStatus       String    @default("not-contacted")
+  replySummary     String?
+  objection         String?
+  meetingAt        DateTime?
+  outcomeStatus    String    @default("open")
+  outcomeNotes     String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  pilot       Pilot       @relation(fields: [pilotId], references: [id], onDelete: Cascade)
+  company     Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  opportunity Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  outreach    Outreach?   @relation(fields: [outreachId], references: [id], onDelete: SetNull)
+
+  @@index([pilotId, createdAt])
+  @@index([companyId])
+  @@index([sourceCategory])
+  @@index([issueCategory])
+  @@index([outcomeStatus])
+}
